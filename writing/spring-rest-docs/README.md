@@ -20,7 +20,7 @@
 | REST Docs 추가 | [b351d7d](https://github.com/woowacourse-teams/2026-chaekchaek/commit/b351d7d) | 기존 테스트에 요청과 응답 설명 추가 |
 | UI 연결 완료 | [c3397bc](https://github.com/woowacourse-teams/2026-chaekchaek/commit/c3397bc) | OpenAPI 생성과 Swagger UI 제공 |
 
-첫 두 커밋 사이에서는 `BookControllerTest.java`만 바뀌었어요. 검색 기능은 그대로 둔 채 문서화를 추가한 비교예요. 이 API는 처음부터 Swagger 애노테이션 없이 구현됐고, 도입 과정에서도 컨트롤러는 그대로였어요.[^1][^2]
+첫 두 커밋 사이에서는 `BookControllerTest.java`만 바뀌었어요. 검색 기능은 그대로 둔 채 문서화를 추가한 비교예요. 이 API는 처음부터 Swagger 애노테이션 없이 구현됐고, 도입 과정에서도 컨트롤러는 그대로였어요. 따라서 이 글에서 비교하는 것은 기존 테스트에 문서화를 연결하기 전후예요. Swagger 애노테이션을 사용하던 코드를 REST Docs로 전환한 사례는 아니에요.[^1][^2]
 
 ## 2 컨트롤러의 요청 처리 코드와 문서화 정보
 
@@ -38,7 +38,7 @@ public ResponseEntity<BookSearchResponse> search(
 
 요청 매핑, 입력값 검증, 서비스 호출을 연달아 읽을 수 있어요. `@NotBlank`와 `@Positive`는 요청을 검증하므로 컨트롤러에 남아요. 검색어의 뜻이나 응답 필드의 의미를 설명하는 문서화 정보는 테스트에 추가했어요.
 
-Swagger라는 이름으로 묶어 부르던 도구도 구분할 필요가 있어요. `springdoc-openapi`는 Spring 코드와 애노테이션을 바탕으로 OpenAPI 명세를 만들고, Swagger UI는 그 명세를 화면에 보여 줘요. REST Docs를 사용하더라도 생성한 명세를 Swagger UI에 연결할 수 있어요. 책췍에서는 문서 생성을 테스트에 연결하고, 문서를 읽는 화면은 Swagger UI로 제공했어요.[^2][^5]
+Swagger라는 이름으로 묶어 부르던 도구도 구분할 필요가 있어요. `springdoc-openapi`는 Spring 코드와 애노테이션을 바탕으로 OpenAPI 명세를 만들고, Swagger UI는 그 명세를 화면에 보여 줘요. REST Docs를 사용하더라도 생성한 명세를 Swagger UI에 연결할 수 있어요. 책췍에서는 테스트 실행 결과를 바탕으로 명세를 만들고, 그 명세를 Swagger UI로 제공했어요. Swagger UI를 사용하는 독자라면 문서를 읽는 화면보다, 명세를 만드는 과정에 응답 필드 검증을 연결한다는 차이에 주목하면 좋아요.[^2][^5]
 
 ## 3 REST Docs 선택 근거와 웹 계층 테스트 구성
 
@@ -172,7 +172,7 @@ resource(ResourceSnippetParameters.builder()
     .build())
 ```
 
-Gradle에는 `com.epages.restdocs-api-spec` 플러그인과 테스트용 `restdocs-api-spec-mockmvc` 의존성 0.20.1을 추가했어요. `openapi3` 설정에는 문서 이름과 출력 형식을 지정했고, 생성된 YAML은 `build/api-spec/openapi3.yaml`에 두었어요. 필요한 빌드 흐름은 다음 표처럼 연결돼요.
+Gradle에는 `com.epages.restdocs-api-spec` 플러그인과 테스트용 `restdocs-api-spec-mockmvc` 의존성 0.20.1을 추가했어요. `openapi3` 설정에는 문서 이름과 출력 형식을 지정했고, 생성된 YAML은 `build/api-spec/openapi3.yaml`에 두었어요. 각 태스크가 만드는 파일과 다음 단계에서 사용하는 입력은 다음과 같아요.
 
 | 단계 | 입력 또는 역할 | 다음 단계에 넘기는 것 |
 | --- | --- | --- |
@@ -182,9 +182,11 @@ Gradle에는 `com.epages.restdocs-api-spec` 플러그인과 테스트용 `restdo
 | `stageOpenApiSpec` | 명세를 정적 리소스 경로에 복사 | `static/docs/openapi3.yaml` |
 | `bootJar` | UI와 명세를 실행 JAR에 포함 | 배포할 애플리케이션 |
 
+Gradle의 태스크는 빌드 작업의 단위예요. 다른 태스크에 의존하도록 설정하면 그 작업을 먼저 마친 뒤 실행해요. 이 구성에서 `bootJar`는 `stageOpenApiSpec`에, `stageOpenApiSpec`은 `verifyOpenApi`에, `verifyOpenApi`는 `openapi3`에 의존해요. ePages 플러그인은 `openapi3`가 `check`에 의존하도록 설정하고, Java 플러그인의 `check`에는 `test`가 연결돼 있어요. 그래서 `bootJar`를 호출해도 테스트와 명세 생성, 검증이 먼저 실행돼요.[^9]
+
 이 구성에서는 명세를 생성하는 것뿐 아니라, 생성 결과에 검색 경로와 200, 400, 500, 502 응답이 들어 있는지도 `verifyOpenApi`로 확인했어요. 오류 응답이 `application/problem+json`과 `ProblemDetail` 스키마를 사용하도록 검사한 것도 프로젝트에서 추가한 검증이에요. REST Docs를 도입하면 저절로 생기는 검증은 아니에요.[^2]
 
-당시 구성은 `./gradlew clean test verifyOpenApi`로 테스트부터 생성 명세 검증까지 확인할 수 있어요. 이후 JAR에 명세를 포함해 배포하면 `/docs/swagger-ui.html`에서 읽게 돼요. 독자가 따라 적용할 때도 테스트 성공, 명세 생성, 최종 배포물 포함 여부를 나눠 확인해야 해요. 문서 화면이 열리는지만 보지 말고, 수정한 필드와 예시가 명세에 반영됐는지도 함께 확인해 보세요.
+`backend` 디렉터리에서 `./gradlew clean test verifyOpenApi`를 실행하면 테스트와 명세 생성, 검증까지 확인할 수 있어요. 이 명령에는 JAR를 만드는 작업은 포함되지 않아요. 문서를 포함한 배포용 JAR까지 만들려면 `./gradlew clean bootJar`를 실행해요. 앞서 연결한 태스크들이 함께 실행되므로 테스트부터 다시 확인해요. 이 JAR를 배포하면 `/docs/swagger-ui.html`에서 문서를 읽을 수 있어요. 독자가 따라 적용할 때도 테스트 성공, 명세 생성, 최종 배포물 포함 여부를 나눠 확인해야 해요. 문서 화면이 열리는지만 보지 말고, 수정한 필드와 예시가 명세에 반영됐는지도 함께 확인해 보세요.
 
 ## 7 문서화 코드 증가와 배포 시 스니펫 생성 비용
 
@@ -201,7 +203,7 @@ Gradle에는 `com.epages.restdocs-api-spec` 플러그인과 테스트용 `restdo
 
 ### 스니펫 누락에 따른 CD 빌드 실패와 수정
 
-문서화의 영향은 테스트 파일에서 끝나지 않았어요. [PR #62](https://github.com/woowacourse-teams/2026-chaekchaek/pull/62)에는 CD에서 `bootJar`를 만들다가 `openapi3` 단계가 실패한 기록이 있어요. 기존 명령은 CI에서 테스트를 했다는 이유로 CD에서는 테스트를 생략했어요. 하지만 CD 빌드 환경에는 명세를 생성할 스니펫이 없었어요. 테스트 성공 여부와 문서 생성에 필요한 파일의 존재는 서로 다른 조건이었어요.[^3]
+문서화의 영향은 테스트 파일에서 끝나지 않았어요. [PR #62](https://github.com/woowacourse-teams/2026-chaekchaek/pull/62)에는 CD에서 `bootJar`를 만들다가 `openapi3` 단계가 실패한 기록이 있어요. 당시 CI는 GitHub가 제공하는 실행 환경에서, CD는 팀이 관리하는 별도 실행 환경에서 동작했어요. CI에서 업로드한 파일은 테스트 보고서였고, CD에는 CI가 만든 스니펫이나 JAR를 내려받는 단계가 없었어요.[^10] 그런데 기존 CD 명령은 CI에서 테스트를 했다는 이유로 테스트를 생략했어요. 그 결과 CD 빌드 환경에는 명세를 생성할 스니펫이 없었어요. 테스트 성공 여부와 문서 생성에 필요한 파일의 존재는 서로 다른 조건이었어요.[^3]
 
 ```bash
 # 변경 전
@@ -213,7 +215,14 @@ Gradle에는 `com.epages.restdocs-api-spec` 플러그인과 테스트용 `restdo
 
 [PR #62](https://github.com/woowacourse-teams/2026-chaekchaek/pull/62)에서는 CD에서도 테스트를 실행해 스니펫을 만들도록 바꿨어요. 테스트가 검증뿐 아니라 문서 생성의 입력을 만드는 단계이기도 했기 때문이에요. CI에서 한 번 통과했어도 그때 만든 파일을 CD로 전달하지 않으면 다음 빌드에서 사용할 수 없어요. 이 수정으로 문서 생성에 필요한 입력을 마련했지만, PR에는 CI와 CD의 중복 테스트 실행이 단점으로 남았어요.
 
-문서 생성이 빌드에 연결되면, 테스트 성공 여부와 함께 그 실행에서 만든 산출물이 다음 단계에 전달되는지도 확인해야 해요.
+PR #62에서는 CD에서 필요한 파일을 다시 만드는 쪽을 선택했어요. 중복 실행을 줄이려면 CI에서 검증한 배포물을 CD에 전달하는 방법도 검토할 수 있어요.
+
+| 구분 | CD가 사용하는 파일 | 중복 실행과 관리할 일 |
+| --- | --- | --- |
+| PR #62에서 적용한 방식 | CD에서 테스트와 문서 생성을 다시 실행해 만든 JAR | CI에서 수행한 테스트를 다시 실행해요 |
+| 후속 개선으로 검토할 방식 | CI에서 문서를 포함해 만들고 검증한 JAR | JAR를 다시 만들기 위한 테스트 실행을 줄일 수 있지만, 배포할 코드와 일치하는 산출물을 전달해야 해요 |
+
+문서 생성이 빌드에 연결되면, 테스트 성공 여부와 함께 그 실행에서 만든 파일을 다음 단계에서 어떻게 사용할지도 정해야 해요.
 
 ## 8 REST Docs 도입 판단과 남은 배포 과제
 
@@ -333,3 +342,8 @@ wrong-description: PASS
 [^7]: [ePages restdocs api spec](https://github.com/ePages-de/restdocs-api-spec) REST Docs 스니펫을 OpenAPI로 변환하는 확장 도구. 프로젝트 사용 버전은 0.20.1.
 
 [^8]: [Spring Rest Docs 적용, 우아한형제들 기술블로그](https://techblog.woowahan.com/2597/) 2018-12-28
+
+[^9]: [책췍의 Gradle 태스크 설정](https://github.com/woowacourse-teams/2026-chaekchaek/blob/c3397bc116d7e9c6211f6d715adb466b341efa50/backend/build.gradle), [ePages 0.20.1의 공통 태스크 설정](https://github.com/ePages-de/restdocs-api-spec/blob/0.20.1/restdocs-api-spec-gradle-plugin/src/main/kotlin/com/epages/restdocs/apispec/gradle/RestdocsApiSpecPlugin.kt). 프로젝트 설정과 플러그인이 연결한 선행 태스크 참고.
+
+[^10]: PR #62 시점의 [CI 설정](https://github.com/woowacourse-teams/2026-chaekchaek/blob/a20c0f83aa7a5ce0a4c52623c60f3bba39b4c9ac/.github/workflows/backend-ci.yml)과 [CD 설정](https://github.com/woowacourse-teams/2026-chaekchaek/blob/a20c0f83aa7a5ce0a4c52623c60f3bba39b4c9ac/.github/workflows/backend-cd.yml). 별도 실행 환경, 테스트 보고서 업로드, CD의 별도 빌드 구성 참고.
+
