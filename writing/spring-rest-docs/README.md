@@ -1,4 +1,4 @@
-# 문서화 코드를 테스트에 두면 달라지는 것
+# HTTP 200이어도 실패하는 테스트: REST Docs로 문서 누락 잡기
 
 책췍 도서 검색 API에 Spring REST Docs를 적용한 경험
 
@@ -346,4 +346,5 @@ wrong-description: PASS
 [^9]: [책췍의 Gradle 태스크 설정](https://github.com/woowacourse-teams/2026-chaekchaek/blob/c3397bc116d7e9c6211f6d715adb466b341efa50/backend/build.gradle), [ePages 0.20.1의 공통 태스크 설정](https://github.com/ePages-de/restdocs-api-spec/blob/0.20.1/restdocs-api-spec-gradle-plugin/src/main/kotlin/com/epages/restdocs/apispec/gradle/RestdocsApiSpecPlugin.kt). 프로젝트 설정과 플러그인이 연결한 선행 태스크 참고.
 
 [^10]: PR #62 시점의 [CI 설정](https://github.com/woowacourse-teams/2026-chaekchaek/blob/a20c0f83aa7a5ce0a4c52623c60f3bba39b4c9ac/.github/workflows/backend-ci.yml)과 [CD 설정](https://github.com/woowacourse-teams/2026-chaekchaek/blob/a20c0f83aa7a5ce0a4c52623c60f3bba39b4c9ac/.github/workflows/backend-cd.yml). 별도 실행 환경, 테스트 보고서 업로드, CD의 별도 빌드 구성 참고.
+
 
